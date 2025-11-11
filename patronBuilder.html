@@ -17,9 +17,37 @@ const FormFactor   = Object.freeze({ ATX: "ATX", MICRO_ATX: "MICRO_ATX", MINI_IT
 const Rating80Plus = Object.freeze({ BRONZE: "BRONZE", SILVER: "SILVER", GOLD: "GOLD", PLATINUM: "PLATINUM" });
 const CoolingType  = Object.freeze({ AIR: "AIR", LIQUID: "LIQUID" });
 
+// ✅ CORRECCIÓN 1: Cambiar el nombre a MonitorConnection
+const MonitorConnection = Object.freeze({
+    HDMI: "HDMI",
+    DISPLAY_PORT: "DISPLAY_PORT", 
+    VGA: "VGA"
+});
+
 /* =========================
    Value Objects (clases con validaciones)
    ========================= */
+
+// ✅ CORRECCIÓN 2: Cambiar MONITOR a Monitor (minúsculas) y añadir validaciones
+class Monitor {
+  constructor(pulgadas, color, conexion){
+    this.pulgadas = pulgadas;
+    this.color = color;
+    this.conexion = conexion;
+
+    // ✅ CORRECCIÓN 3: Añadir validaciones como en las otras clases
+    if (pulgadas < 15 || pulgadas > 50) {
+      throw new Error("Monitor: las pulgadas deben estar entre 15 y 50");
+    }
+    if (!color || color.trim() === "") {
+      throw new Error("Monitor: el color no puede estar vacío");
+    }
+    if (!Object.values(MonitorConnection).includes(conexion)) {
+      throw new Error(`Monitor: conexión no válida. Use: ${Object.values(MonitorConnection).join(", ")}`);
+    }
+  }
+}
+
 class CPU {
   constructor(brand, model, socket, cores, threads, baseGHz) {
     this.brand = brand; this.model = model; this.socket = socket;
@@ -103,6 +131,8 @@ class Ordenador {
     this.storage = builder.storage;
     this.gpu = builder.gpu;
     this.os = builder.os;
+    //Añadimos monitor a la clase principal
+    this.monitor = builder.monitor;
     // opcionales
     this.mb = builder.mb;
     this.psu = builder.psu;
@@ -119,6 +149,10 @@ class Ordenador {
     lines.push(`Almacenamiento: ${this.storage.type} ${this.storage.capacityGB}GB`);
     lines.push(`GPU: ${this.gpu.vendor} ${this.gpu.model} ${this.gpu.vramGB}GB VRAM${this.gpu.dedicated ? " (dedicada)" : " (integrada)"}`);
     lines.push(`SO: ${this.os.name}${this.os.licensed ? " (licenciado)" : " (sin licencia)"}`);
+    
+    // ✅ CORRECCIÓN 4: Añadir dos puntos después de "Monitor"
+    lines.push(`Monitor: ${this.monitor ? `${this.monitor.pulgadas}" ${this.monitor.color} (${this.monitor.conexion})` : "—"}`);
+    
     lines.push(`Placa: ${this.mb ? `${this.mb.socket} ${this.mb.chipset} ${this.mb.formFactor} RAM:${this.mb.ramTypeSupported}` : "—"}`);
     lines.push(`PSU: ${this.psu ? `${this.psu.watts}W ${this.psu.rating}` : "—"}`);
     lines.push(`Refrigeración: ${this.cooling ? this.cooling.type : "—"}`);
@@ -140,6 +174,8 @@ class OrdenadorBuilder {
     this.storage = null;
     this.gpu = null;
     this.os = null;
+    //Inicializamos monitor en el contructor Builder
+    this.monitor = null;
     // opcionales
     this.mb = null;
     this.psu = null;
@@ -155,6 +191,7 @@ class OrdenadorBuilder {
   setStorage(stor)   { this.storage = stor; return this; }
   setGPU(gpu)        { this.gpu = gpu; return this; }
   setOS(os)          { this.os = os; return this; }
+  
 
   // opcionales (varios)
   withMotherboard(mb)   { this.mb = mb; return this; }
@@ -163,11 +200,25 @@ class OrdenadorBuilder {
   withConnectivity(conn){ this.conn = conn; return this; }
   withPorts(ports)      { this.ports = ports; return this; }
   withCase(box)         { this.box = box; return this; }
+  //Crear método setter para Monitor (como opcional)
+  withMonitor(monitor) { this.monitor = monitor; return this; }
+
 
   build() {
     // 1) presencia de obligatorias
     if (!this.cpu || !this.ram || !this.storage || !this.gpu || !this.os) {
       throw new Error("Faltan componentes obligatorios: CPU, RAM, Storage, GPU u OS.");
+    }
+     // Añadir validación opcional para monitor
+    if (this.monitor) {
+      // Verificar que la GPU tenga puertos compatibles con el monitor
+      // ✅ CORRECCIÓN 5: Ahora usa MonitorConnection correctamente
+      if (this.monitor.conexion === MonitorConnection.HDMI && this.ports && this.ports.hdmi < 1) {
+        console.log("[AVISO] El monitor requiere HDMI pero los puertos HDMI son insuficientes");
+      }
+      if (this.monitor.conexion === MonitorConnection.DISPLAY_PORT && this.ports && this.ports.displayPort < 1) {
+        console.log("[AVISO] El monitor requiere DisplayPort pero los puertos DisplayPort son insuficientes");
+      }
     }
     // 2) compatibilidades si hay opcionales
     if (this.mb) {
@@ -206,7 +257,9 @@ function main() {
     .withPSU(new PSU(500, Rating80Plus.BRONZE))
     .withConnectivity(new Connectivity(true, true, 1))
     .withPorts(new Ports(4, 1, 1, 1))
-    .withCase(new CaseBox("NZXT H210", FormFactor.MINI_ITX)) // mostrará aviso de factor de forma
+    .withCase(new CaseBox("NZXT H210", FormFactor.MINI_ITX))
+    // ✅ CORRECCIÓN 6: Añadir monitor al ordenador básico también
+    .withMonitor(new Monitor(24, "Negro", MonitorConnection.HDMI))
     .build();
 
   console.log("=== ORDENADOR BÁSICO ===\n" + basico.toString() + "\n");
@@ -224,10 +277,12 @@ function main() {
     .withConnectivity(new Connectivity(true, true, 2))
     .withPorts(new Ports(6, 2, 1, 3))
     .withCase(new CaseBox("Phanteks P400A", FormFactor.ATX))
+    // ✅ CORRECCIÓN 7: Usar MonitorConnection en lugar del nombre incorrecto
+    .withMonitor(new Monitor(27, "RGB Negro/Rojo", MonitorConnection.DISPLAY_PORT))
     .build();
 
   console.log("=== ORDENADOR GAMING ===\n" + gaming.toString());
 }
 
-main() ;
+main();
 </script>
