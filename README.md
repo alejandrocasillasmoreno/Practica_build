@@ -1,7 +1,7 @@
-✅ Tarea Específica
+Tarea Específica
 Extiende la implementación existente del Patrón Builder para incluir el componente Monitor, siguiendo la misma estructura y principios de diseño que el resto del sistema.
 
-🔧 Requisitos Técnicos
+Requisitos Técnicos
 1. Enum Inmutable para Conexiones
 Crea un objeto congelado (Object.freeze()) que defina los tipos de conexión permitidos
 
